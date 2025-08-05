@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basketball Player Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+        }
+        
+        .scoring-system {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .scoring-system h3 {
+            margin-top: 0;
+            font-size: 1.5em;
+        }
+        
+        .scoring-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .scoring-item {
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .search-box, .filter-select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .search-box:focus, .filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        td {
+            padding: 12px 10px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s ease;
+        }
+        
+        tr:hover td {
+            background-color: #f8f9ff;
+        }
+        
+        .rank-cell {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500) !important; color: white; }
+        .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A9A9A9) !important; color: white; }
+        .rank-3 { background: linear-gradient(135deg, #CD7F32, #B8860B) !important; color: white; }
+        .rank-top10 { background: linear-gradient(135deg, #90EE90, #32CD32) !important; color: white; }
+        .rank-top25 { background: linear-gradient(135deg, #87CEEB, #4682B4) !important; color: white; }
+        
+        .player-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .team-name {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s ease;
+        }
+        
+        .sortable:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        
+        .sorted-asc::after {
+            content: ' ↑';
+            color: #FFD700;
+        }
+        
+        .score-cell {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #e74c3c;
+        }
+        
+        .pts-cell {
+            font-weight: bold;
+            color: #2980b9;
+        }
+        
+        .custom-column {
+            background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%) !important;
+            position: relative;
+        }
+        
+        .custom-selector {
+            background: rgba(67, 206, 162, 0.1);
+            border: 2px solid #43cea2;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .custom-selector h3 {
+            color: #185a9d;
+            margin-top: 0;
+            font-size: 1.3em;
+        }
+        
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .checkbox-item:hover {
+            background-color: rgba(67, 206, 162, 0.1);
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+        
+        .checkbox-item label {
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-box {
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .stats-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏀 Basketball Player Rankings</h1>
+        <p class="subtitle">Per 36 Minutes Composite Score Analysis</p>
+        
+        <div class="scoring-system">
+            <h3>📊 Scoring System</h3>
+            <div class="scoring-grid">
+                <div class="scoring-item"><strong>3-Point FG:</strong> 3 pts</div>
+                <div class="scoring-item"><strong>2-Point FG:</strong> 2 pts</div>
+                <div class="scoring-item"><strong>Free Throws:</strong> 1 pt</div>
+                <div class="scoring-item"><strong>Rebounds:</strong> 1.2 pts</div>
+                <div class="scoring-item"><strong>Assists:</strong> 1.5 pts</div>
+                <div class="scoring-item"><strong>Blocks:</strong> 2 pts</div>
+                <div class="scoring-item"><strong>Steals:</strong> 2 pts</div>
+                <div class="scoring-item"><strong>Turnovers:</strong> -1 pt</div>
+            </div>
+        </div>
+        
+        <div class="stats-summary" id="statsSummary">
+            <!-- Stats will be populated here -->
+        </div>
+        
+        <div class="custom-selector">
+            <h3>🎯 Custom Column Builder</h3>
+            <p>Select multiple stats to sum them into a custom sortable column:</p>
+            <div class="checkbox-grid">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-pts36" value="pts36">
+                    <label for="cb-pts36">PTS/36</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-fgm36" value="fgm36">
+                    <label for="cb-fgm36">FGM/36</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-threePM36" value="threePM36">
+                    <label for="cb-threePM36">3PM/36</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-twoPM36" value="twoPM36">
+                    <label for="cb-twoPM36">2PM/36</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-ftm36" value="ftm36">
+                    <label for="cb-ftm36">FTM/36</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-reb36" value="reb36">
+                    <label for="cb-reb36">REB/36</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-ast36" value="ast36">
+                    <label for="cb-ast36">AST/36</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-blk36" value="blk36">
+                    <label for="cb-blk36">BLK/36</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-stl36" value="stl36">
+                    <label for="cb-stl36">STL/36</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cb-to36" value="to36">
+                    <label for="cb-to36">TO/36</label>
+                </div>
+            </div>
+        </div>
+            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search players or teams...">
+            <select class="filter-select" id="teamFilter">
+                <option value="">All Teams</option>
+            </select>
+            <select class="filter-select" id="rankFilter">
+                <option value="">All Ranks</option>
+                <option value="top10">Top 10</option>
+                <option value="top25">Top 25</option>
+                <option value="top50">Top 50</option>
+            </select>
+        </div>
+        
+        <div class="table-container">
+            <table id="playerTable">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th>Team</th>
+                        <th class="sortable" data-column="compositeScore">Composite Score ↕</th>
+                        <th class="sortable" data-column="pts36">PTS/36 ↕</th>
+                        <th class="sortable" data-column="fgm36">FGM/36 ↕</th>
+                        <th class="sortable" data-column="threePM36">3PM/36 ↕</th>
+                        <th class="sortable" data-column="twoPM36">2PM/36 ↕</th>
+                        <th class="sortable" data-column="ftm36">FTM/36 ↕</th>
+                        <th class="sortable" data-column="reb36">REB/36 ↕</th>
+                        <th class="sortable" data-column="ast36">AST/36 ↕</th>
+                        <th class="sortable" data-column="blk36">BLK/36 ↕</th>
+                        <th class="sortable" data-column="stl36">STL/36 ↕</th>
+                        <th class="sortable" data-column="to36">TO/36 ↕</th>
+                        <th class="sortable" data-column="mpg">MPG ↕</th>
+                        <th id="custom-column-header" class="sortable custom-column" data-column="customSum">Custom Sum ↕</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let playersData = [];
+        
+        // CSV data embedded directly
+        const csvData = `1,Player Name,Team Name,MPG,PPG,RPG,APG,SPG,BPG,TO/G,FG%,3P%,FT%,2PM,2PA,3PM,3PA,FTM,FTA
+2,Dominique Wilkins,Atlanta Hawks,35.5,24.8,6.7,2.5,1.3,0.6,2.5,0.461,0.319,0.811,8.6,18,0.7,2.1,5.6,6.9
+3,Kevin Willis,Atlanta Hawks,26.9,12.1,8.4,0.9,0.7,0.5,1.8,0.487,0.211,0.713,5,10.1,0,0.1,2.1,3
+4,Spud Webb,Atlanta Hawks,24.9,9.9,2.1,5.3,1.1,0.1,2,0.452,0.314,0.848,3.2,6.6,0.4,1.3,2.4,2.8
+5,Josh Smith,Atlanta Hawks,32.4,14.5,7.4,3.1,1.2,1.9,2.5,0.452,0.285,0.632,5.2,10.8,0.5,1.8,2.6,4.2
+6,Dikembe Mutombo,Atlanta Hawks,30.8,9.8,10.3,1,0.4,2.8,1.8,0.518,0,0.684,3.5,6.7,0,0,2.8,4.1
+7,Danny Ainge,Boston Celtics,26.6,11.5,2.7,4,1.1,0.1,1.5,0.469,0.378,0.846,3.5,7,1,2.5,1.6,1.9
+8,Kevin McHale,Boston Celtics,31,17.9,7.3,1.7,0.4,1.7,1.9,0.554,0.261,0.798,7,12.5,0,0.2,3.7,4.7
+9,Antoine Walker,Boston Celtics,35.3,17.5,7.7,3.5,1.2,0.5,2.8,0.414,0.325,0.633,5.3,11.7,1.6,4.8,2.3,3.7
+10,Paul Pierce,Boston Celtics,34.2,19.7,5.6,3.5,1.3,0.6,2.6,0.445,0.368,0.806,4.9,10.2,1.6,4.3,5.2,6.4
+11,Rajon Rondo,Boston Celtics,29.9,9.8,4.5,7.9,1.6,0.1,2.7,0.456,0.324,0.611,3.6,7.5,0.5,1.4,1.2,1.9
+12,Drazen Petrovic,Brooklyn Nets,26.4,15.4,2.3,2.4,0.9,0.1,2.1,0.506,0.437,0.841,5,9.6,0.9,2,2.7,3.3
+13,Deron Williams,Brooklyn Nets,34.2,16.3,3.1,8.1,1,0.2,2.8,0.445,0.357,0.822,4.4,9.1,1.4,3.9,3.4,4.1
+14,Joe Johnson,Brooklyn Nets,34.6,16,4,3.9,0.8,0.2,1.9,0.441,0.371,0.802,4.6,9.7,1.5,4.2,2.2,2.7
+15,Kenyon Martin,Brooklyn Nets,30.6,12.3,6.8,1.9,1.2,1.1,1.7,0.483,0.234,0.629,5,10.2,0.1,0.4,2,3.2
+16,Richard Jefferson,Brooklyn Nets,29,12.6,4,2,0.7,0.3,1.5,0.464,0.376,0.768,3.5,7.1,0.9,2.3,3,3.9
+17,Muggsy Bogues,Charlotte Hornets,28.6,7.7,2.6,7.6,1.5,0,1.6,0.458,0.278,0.827,3.1,6.6,0.1,0.4,1.2,1.4
+18,Larry Johnson,Charlotte Hornets,36.3,16.2,7.5,3.3,0.7,0.4,2,0.484,0.332,0.766,5.7,11.3,0.5,1.6,3.2,4.2
+19,Gerald Wallace,Charlotte Hornets,29.7,11.9,5.8,2.1,1.4,0.8,1.8,0.469,0.312,0.709,3.7,7.4,0.5,1.6,3,4.2
+20,Adam Morrison,Charlotte Hornets,20.4,7.5,2.1,1.4,0.2,0.1,1.1,0.373,0.331,0.71,2.1,5.4,0.8,2.3,0.9,1.2
+21,Kemba Walker,Charlotte Hornets,33.1,19.3,3.8,5.3,1.2,0.4,2.1,0.418,0.36,0.84,4.4,9.7,2.2,6.2,3.8,4.5
+22,Dennis Rodman,Chicago Bulls,31.7,7.3,13.1,1.8,0.7,0.6,1.6,0.521,0.231,0.584,2.9,5.4,0.1,0.4,1.2,2
+23,Toni Kukoc,Chicago Bulls,26.3,11.6,4.2,3.7,1,0.3,1.8,0.447,0.335,0.729,3.4,7,0.9,2.6,2.1,2.9
+24,Joakim Noah,Chicago Bulls,27.7,8.8,9,2.8,0.8,1.3,1.7,0.491,0,0.7,3.3,6.8,0,0,2.1,2.9
+25,Ben Gordon,Chicago Bulls,27.4,14.9,2.5,2.5,0.7,0.2,2.1,0.432,0.401,0.857,3.7,8.3,1.6,3.9,2.8,3.2
+26,Luol Deng,Chicago Bulls,34.3,14.8,6.1,2.3,1,0.5,1.6,0.456,0.332,0.769,5,10.3,0.7,2.2,2.7,3.5
+27,Anderson Varejao,Cleveland Cavaliers,23.9,7.2,7.2,1.2,0.8,0.6,0.9,0.509,0.023,0.63,2.9,5.5,0,0.1,1.5,2.4
+28,Brad Daugherty,Cleveland Cavaliers,36.5,19,9.5,3.7,0.8,0.7,2.8,0.532,0.143,0.747,7,13.1,0,0,5,6.7
+29,Zydrunas Ilgauskas,Cleveland Cavaliers,27.2,13,7.3,1.1,0.5,1.6,1.8,0.476,0.31,0.78,5,10.4,0,0.1,3,3.8
+30,Mark Price,Cleveland Cavaliers,29.9,15.2,2.6,6.7,1.2,0.1,2.5,0.472,0.402,0.904,4.1,8.2,1.4,3.4,3,3.3
+31,Andre Miller,Cleveland Cavaliers,30.9,12.5,3.7,6.5,1.2,0.2,2.4,0.461,0.217,0.807,4.5,9.4,0.1,0.7,3.1,3.8
+32,Dirk Nowitzki,Dallas Mavericks,33.8,20.7,7.5,2.4,0.8,0.8,1.6,0.471,0.38,0.879,6,12.2,1.3,3.4,4.8,5.4
+33,Jamal Mashburn,Dallas Mavericks,37.3,19.1,5.4,4,1,0.2,2.6,0.418,0.345,0.766,5.7,13.1,1.3,3.6,3.8,5
+34,Jason Kidd,Dallas Mavericks,36,12.6,6.3,8.7,1.9,0.3,2.9,0.4,0.349,0.785,3,7.1,1.4,4.1,2.2,2.8
+35,Shawn Bradley,Dallas Mavericks,23.5,8.1,6.3,0.7,0.6,2.5,1.3,0.457,0.103,0.716,3.3,7.1,0,0,1.6,2.2
+36,Michael Finley,Dallas Mavericks,34.4,15.7,4.4,2.9,0.9,0.3,1.5,0.444,0.375,0.811,4.8,10.2,1.3,3.5,2.2,2.7
+37,Alex English,Denver Nuggets,31.9,21.5,5.5,3.6,0.9,0.7,2.5,0.507,0.217,0.832,8.9,17.6,0,0.1,3.6,4.3
+38,Mahmoud Abdul-Rauf,Denver Nuggets,26.7,14.6,1.9,3.5,0.8,0.1,1.6,0.442,0.354,0.905,5.2,11.3,0.8,2.3,1.8,2
+39,Kenneth Faried,Denver Nuggets,24.5,11.4,8.1,1,0.7,0.8,1.3,0.546,0.222,0.654,4.6,8.3,0,0.1,2.2,3.3
+40,Marcus Camby,Denver Nuggets,29.5,9.5,9.8,1.9,1,2.4,1.4,0.466,0.205,0.67,3.9,8.2,0,0.1,1.8,2.6
+41,Ty Lawson,Denver Nuggets,29.2,12.7,2.7,6,1.2,0.1,2.1,0.46,0.359,0.77,3.7,7.5,0.9,2.4,2.7,3.6
+42,Ben Wallace,Detroit Pistons,29.5,5.7,9.6,1.3,1.3,2,1,0.474,0.137,0.414,2.4,4.9,0,0,1,2.5
+43,Bill Laimbeer,Detroit Pistons,31.8,12.9,9.7,2,0.7,0.9,1.5,0.498,0.326,0.837,5,9.9,0.2,0.6,2.3,2.7
+44,Grant Hill,Detroit Pistons,33.9,16.7,6,4.1,1.2,0.6,2.4,0.483,0.314,0.769,6,12.1,0.2,0.7,4.1,5.4
+45,Chauncey Billups,Detroit Pistons,31.6,15.2,2.9,5.4,1,0.2,2,0.415,0.387,0.894,2.8,6.4,1.8,4.5,4.3,4.8
+46,Richard Hamilton,Detroit Pistons,32.1,17.1,3.1,3.4,0.8,0.1,2.1,0.449,0.346,0.852,5.9,12.8,0.6,1.7,3.5,4.1
+47,Andrew Bogut,Golden State Warriors,28.1,9.6,8.7,2.2,0.6,1.5,1.7,0.535,0.12,0.557,4.2,7.9,0,0,1.2,2.1
+48,Jason Richardson,Golden State Warriors,34.1,17.1,5,2.7,1.2,0.4,1.8,0.438,0.37,0.707,4.6,9.7,1.9,5.1,2.2,3.2
+49,Monta Ellis,Golden State Warriors,34.8,17.8,3.5,4.6,1.7,0.3,2.7,0.451,0.314,0.772,6,12.4,0.9,2.8,3.2,4.2
+50,Latrell Sprewell,Golden State Warriors,38.6,18.3,4.1,4,1.4,0.4,2.7,0.425,0.337,0.804,5.4,12.1,1.2,3.6,3.8,4.7
+51,Chris Mullin,Golden State Warriors,32.6,18.2,4.1,3.5,1.6,0.6,2.3,0.509,0.384,0.865,6,11.3,0.8,2.2,3.7,4.2
+52,Hakeem Olajuwon,Houston Rockets,35.7,21.8,11.1,2.5,1.7,3.1,3,0.512,0.202,0.712,8.7,16.9,0,0.1,4.4,6.2
+53,Steve Francis,Houston Rockets,37.6,18.1,5.6,6,1.5,0.4,3.5,0.429,0.341,0.797,5.2,11.4,1,2.9,4.8,6.1
+54,Tracy McGrady,Houston Rockets,32.7,19.6,5.6,4.4,1.2,0.9,2.2,0.435,0.338,0.746,6,13,1.2,3.4,4.1,5.5
+55,Rodney McCray,Houston Rockets,32.4,11.7,6.6,3.6,0.8,0.6,1.8,0.503,0.26,0.761,4.5,8.8,0.1,0.3,2.5,3.3
+56,Trevor Ariza,Houston Rockets,29.5,10.4,4.8,2.1,1.5,0.3,1.3,0.422,0.351,0.731,2.3,4.7,1.4,4.1,1.5,2.1
+57,Danny Granger,Indiana Pacers,31.5,16.8,4.9,1.9,1,0.8,1.9,0.434,0.38,0.848,4,8.6,1.7,4.5,3.7,4.4
+58,Chuck Person,Indiana Pacers,30.7,14.7,5.1,2.8,0.7,0.2,2.1,0.458,0.362,0.723,4.6,9.3,1.3,3.6,1.6,2.2
+59,Jermaine O'Neal,Indiana Pacers,27.1,13.2,7.2,1.4,0.5,1.8,1.9,0.467,0.147,0.715,5.1,10.8,0,0.1,3,4.2
+60,Rik Smits,Indiana Pacers,26.6,14.8,6.1,1.4,0.4,1.3,1.8,0.507,0.115,0.773,6.1,12,0,0,2.6,3.4
+61,Roy Hibbert,Indiana Pacers,24.8,10,6.3,1.3,0.4,1.7,1.6,0.465,0.25,0.755,4,8.5,0,0,2.1,2.7
+62,Elton Brand,Los Angeles Clippers,33,15.9,8.5,2.1,0.9,1.7,1.9,0.5,0.095,0.736,6.2,12.4,0,0,3.4,4.7
+63,Michael Cage,Los Angeles Clippers,26.1,7.3,7.6,0.9,0.9,0.6,1,0.515,0,0.664,2.9,5.6,0,0,1.4,2.2
+64,Blake Griffin,Los Angeles Clippers,31.9,19,8,4,0.8,0.5,2.3,0.493,0.328,0.696,6.4,12.2,0.7,2.1,4.1,5.9
+65,Lou Williams,Los Angeles Clippers,24.1,13.9,2.2,3.4,0.8,0.2,1.7,0.419,0.351,0.842,3.2,7,1.3,3.7,3.6,4.3
+66,JJ Redick,Los Angeles Clippers,25.5,12.8,2,2,0.4,0.1,1.1,0.447,0.415,0.892,2.2,4.5,2.1,5,2.2,2.5
+67,Robert Horry,Los Angeles Lakers,24.5,7,4.8,2.1,1,0.9,1.2,0.425,0.341,0.726,1.8,3.9,0.7,2.1,1.2,1.6
+68,Derek Fisher,Los Angeles Lakers,25.4,8.3,2.1,3,1.1,0.1,1.1,0.399,0.374,0.817,1.9,4.7,1,2.6,1.6,1.9
+69,Kurt Rambis,Los Angeles Lakers,18.5,5.2,5.6,1.1,0.9,0.5,1.2,0.534,0,0.689,2,3.8,0,0,1.1,1.6
+70,Michael Cooper,Los Angeles Lakers,27.1,8.9,3.2,4.2,1.2,0.6,1.6,0.469,0.34,0.833,3,5.9,0.5,1.4,1.5,1.8
+71,James Worthy,Los Angeles Lakers,32.4,17.6,5.1,3,1.1,0.7,2,0.521,0.241,0.769,7.3,13.7,0.1,0.5,2.6,3.4
+72,Shane Battier,Memphis Grizzlies,30.7,8.6,4.2,1.8,1,0.9,0.9,0.437,0.384,0.743,1.8,3.6,1.3,3.3,1.2,1.6
+73,Zach Randolph,Memphis Grizzlies,31,16.6,9.1,1.8,0.7,0.3,2.1,0.471,0.273,0.764,6.5,13.5,0.2,0.7,3.1,4.1
+74,Tony Allen,Memphis Grizzlies,22,8.1,3.5,1.3,1.4,0.4,1.4,0.475,0.282,0.709,3,6.1,0.2,0.5,1.7,2.3
+75,Mike Miller,Memphis Grizzlies,26.9,10.6,4.2,2.6,0.6,0.2,1.5,0.459,0.407,0.769,2.4,4.7,1.5,3.8,1.3,1.7
+76,Jason Williams,Memphis Grizzlies,29.4,10.5,2.3,5.9,1.2,0.1,2.1,0.398,0.327,0.813,2.3,5,1.6,4.8,1.1,1.4
+77,Alonzo Mourning,Miami Heat,31,17.1,8.5,1.1,0.5,2.8,2.6,0.527,0.247,0.692,6.1,11.5,0,0.1,4.8,7
+78,Udonis Haslem,Miami Heat,24.7,7.5,6.6,0.8,0.5,0.3,0.9,0.489,0.127,0.756,3,6.1,0,0.1,1.4,1.9
+79,Glen Rice,Miami Heat,35,18.3,4.4,2.1,1,0.3,1.7,0.456,0.4,0.846,5.2,11,1.6,3.9,3.2,3.8
+80,Eddie Jones,Miami Heat,34.4,14.8,4,2.9,1.7,0.6,1.6,0.437,0.373,0.809,3.5,7.5,1.6,4.3,2.9,3.6
+81,Tim Hardaway,Miami Heat,35.3,17.7,3.3,8.2,1.6,0.1,2.9,0.431,0.355,0.782,4.7,10.1,1.8,5,2.9,3.8
+82,Glenn Robinson,Milwaukee Bucks,36.8,20.7,6.1,2.7,1.2,0.6,3.1,0.459,0.34,0.82,7.2,15,0.9,2.6,3.6,4.4
+83,Michael Redd,Milwaukee Bucks,32,19,3.8,2.1,0.9,0.1,1.5,0.447,0.38,0.838,5,10.6,1.7,4.4,4,4.8
+84,Ray Allen,Milwaukee Bucks,35.6,18.9,4.1,3.4,1.1,0.2,2.1,0.452,0.4,0.894,4.3,8.9,2.3,5.7,3.4,3.8
+85,Terry Cummings,Milwaukee Bucks,28.7,16.4,7.3,1.9,1.1,0.5,1.9,0.484,0.295,0.706,6.8,13.9,0,0.1,2.8,4
+86,Sam Cassell,Milwaukee Bucks,30,15.7,3.2,6,1.1,0.2,2.4,0.454,0.331,0.861,5.1,10.6,0.7,2,3.6,4.2
+87,Kevin Garnett,Minnesota Timberwolves,34.5,17.8,10,3.7,1.3,1.4,2.2,0.497,0.275,0.789,7.1,14,0.1,0.4,3.3,4.2
+88,Isaiah Rider,Minnesota Timberwolves,31.7,16.7,3.8,2.7,0.7,0.2,2.5,0.443,0.352,0.812,5.2,11,1.2,3.4,2.8,3.4
+89,Wally Szczerbiak,Minnesota Timberwolves,30.8,14.1,4,2.4,0.6,0.2,1.5,0.485,0.406,0.86,4.4,8.8,0.9,2.2,2.5,2.9
+90,Ricky Rubio,Minnesota Timberwolves,29.6,10.8,4.1,7.4,1.8,0.1,2.5,0.388,0.324,0.843,2.6,6.3,0.9,2.8,2.9,3.4
+91,Gorgui Dieng,Minnesota Timberwolves,20.1,7.3,5.6,1.3,0.7,0.9,1.1,0.496,0.355,0.791,2.5,4.7,0.3,0.9,1.5,1.9
+92,Baron Davis,New Orleans Pelicans,34.2,16.1,3.8,7.2,1.8,0.4,2.8,0.409,0.32,0.711,4.3,9.3,1.6,5,2.8,3.9
+93,Demarcus Cousins,New Orleans Pelicans,29.8,19.6,10.2,3,1.3,1.1,3.3,0.46,0.331,0.737,6.3,13.2,0.7,2,5,6.7
+94,Jarrett Jack,New Orleans Pelicans,27.8,10.8,2.9,4.6,0.8,0.1,2,0.44,0.343,0.855,3.2,6.8,0.7,2.1,2.3,2.7
+95,Tyson Chandler,New Orleans Pelicans,27.3,8.2,9,0.8,0.5,1.2,1.4,0.597,0,0.644,3.1,5.1,0,0,2.1,3.2
+96,Austin Rivers,New Orleans Pelicans,23.8,8.5,2,2.1,0.7,0.2,1,0.419,0.349,0.653,2,4.3,1.1,3.2,1.1,1.7
+97,Jamal Crawford,New York Knicks,29.4,14.6,2.2,3.4,0.9,0.2,1.9,0.41,0.348,0.862,3.4,7.6,1.7,4.8,2.8,3.2
+98,Allan Houston,New York Knicks,33.7,17.3,2.9,2.4,0.7,0.2,2.1,0.444,0.402,0.863,4.8,10.5,1.6,3.9,3.1,3.6
+99,Patrick Ewing,New York Knicks,34.3,21,9.8,1.9,1,2.4,3,0.504,0.152,0.74,8.2,16.2,0,0.1,4.6,6.2
+100,Stephon Marbury,New York Knicks,37.7,19.3,3,7.6,1.2,0.1,3,0.433,0.325,0.784,5.6,12.1,1.2,3.6,4.5,5.7
+101,Gerald Wilkins,New York Knicks,29,13,2.9,3,1,0.2,1.9,0.45,0.316,0.745,4.8,10.3,0.5,1.5,2,2.7
+102,Kendrick Perkins,Oklahoma City Thunder,21.9,5.4,5.8,1,0.3,1.2,1.6,0.53,0,0.594,2.2,4.1,0,0,1,1.7
+103,Nick Collison,Oklahoma City Thunder,20.4,5.9,5.2,1,0.5,0.5,1,0.534,0.208,0.723,2.4,4.4,0,0.1,1,1.4
+104,Serge Ibaka,Oklahoma City Thunder,27.3,12,7.1,0.8,0.4,1.9,1.3,0.513,0.359,0.757,4.3,7.8,0.7,1.9,1.4,1.8
+105,Shaun Livingston,Oklahoma City Thunder,20.6,6.3,2.4,3,0.7,0.4,1.2,0.486,0.178,0.794,2.6,5.2,0,0.1,1.1,1.4
+106,Danilo Gallinari,Oklahoma City Thunder,28.8,14.9,4.7,1.9,0.7,0.3,1.2,0.428,0.381,0.876,2.7,5.7,1.9,4.9,4,4.5
+107,Anfernee Hardaway,Orlando Magic,33.7,15.2,4.5,5,1.6,0.4,2.5,0.458,0.316,0.774,5,10.1,0.7,2.3,3.1,4
+108,Scott Skiles,Orlando Magic,28,11.1,2.5,6.5,0.8,0,2.5,0.435,0.379,0.889,2.9,6.5,0.9,2.3,2.6,2.9
+109,Dennis Scott,Orlando Magic,28.6,12.9,2.8,2.1,0.8,0.3,1.2,0.417,0.397,0.793,2.8,6.4,1.9,4.9,1.5,1.9
+110,Jameer Nelson,Orlando Magic,27.9,11.3,3,5.1,0.9,0.1,2.1,0.436,0.368,0.81,3,6.3,1.3,3.6,1.4,1.7
+111,Dwight Howard,Orlando Magic,31.8,15.7,11.8,1.3,0.9,1.8,2.7,0.587,0.214,0.567,5.7,9.6,0,0.1,4.3,7.6
+112,Allen Iverson,Philadelphia 76ers,41.1,26.7,3.7,6.2,2.2,0.2,3.6,0.425,0.313,0.78,8.1,18.1,1.2,3.7,7,8.9
+113,Maurice Cheeks,Philadelphia 76ers,31.6,11.1,2.8,6.7,2.1,0.3,2.1,0.523,0.255,0.793,4.4,8.3,0.1,0.2,2.1,2.7
+114,Jerry Stackhouse,Philadelphia 76ers,31.2,16.9,3.2,3.3,0.9,0.5,2.7,0.409,0.309,0.822,4.5,10.3,1,3.3,4.8,5.8
+115,Kyle Korver,Philadelphia 76ers,25.3,9.7,3,1.7,0.7,0.3,1,0.442,0.429,0.877,1.3,2.9,2,4.6,1.1,1.2
+116,Derrick Coleman,Philadelphia 76ers,33.2,16.5,9.3,2.5,0.8,1.3,2.6,0.447,0.295,0.769,5.5,11.8,0.4,1.4,4.3,5.5
+117,Amar'e Stoudemire,Phoenix Suns,31,18.9,7.8,1.2,0.8,1.2,2.3,0.537,0.236,0.761,7,12.9,0,0.2,4.9,6.4
+118,Shawn Marion,Phoenix Suns,34.5,15.2,8.7,1.9,1.5,1.1,1.5,0.484,0.331,0.81,5.6,10.9,0.7,2.1,2,2.5
+119,Dan Majerle,Phoenix Suns,31.6,11.4,4.5,2.9,1.3,0.4,1.2,0.431,0.358,0.741,2.7,5.6,1.4,4,1.7,2.4
+120,Tom Chambers,Phoenix Suns,30.6,18.1,6.1,2.1,0.8,0.6,2.3,0.468,0.307,0.807,6.5,13.6,0.2,0.7,4.6,5.7
+121,Walter Davis,Phoenix Suns,27.9,18.9,3,3.8,1.2,0.1,2.5,0.511,0.272,0.851,7.7,14.8,0.2,0.7,3,3.6
+122,Clyde Drexler,Portland Trail Blazers,34.6,20.4,6.1,5.6,2,0.7,2.7,0.472,0.318,0.788,6.9,13.9,0.8,2.4,4.3,5.5
+123,Terry Porter,Portland Trail Blazers,27.8,12.2,3,5.6,1.2,0.1,2.1,0.463,0.386,0.836,3.2,6.6,1,2.6,2.7,3.2
+124,Brandon Roy,Portland Trail Blazers,35.5,18.8,4.3,4.7,1,0.2,1.8,0.459,0.348,0.8,5.8,12,1,2.8,4.2,5.2
+125,Arvydas Sabonis,Portland Trail Blazers,24.2,12,7.3,2.1,0.8,1.1,1.8,0.5,0.328,0.786,4.1,8,0.3,0.9,2.8,3.6
+126,Greg Oden,Portland Trail Blazers,19.3,8,6.2,0.5,0.4,1.2,1.3,0.574,0,0.658,3,5.3,0,0,2,3
+127,Mike Bibby,Sacramento Kings,33.9,14.7,3.1,5.5,1.2,0.1,2.1,0.436,0.379,0.802,3.9,8.4,1.5,4,2.4,2.9
+128,Vlade Divac,Sacramento Kings,29.8,11.8,8.2,3.1,1.1,1.4,2.2,0.495,0.235,0.692,4.5,8.9,0.1,0.4,2.5,3.7
+129,Peja Stojakovic,Sacramento Kings,33.5,17,4.7,1.8,0.9,0.1,1.4,0.45,0.401,0.895,3.8,7.9,2.2,5.5,2.8,3.1
+130,Kevin Martin,Sacramento Kings,30.2,17.4,3.2,1.9,0.9,0.1,1.7,0.437,0.384,0.87,3.8,8.2,1.6,4.2,5,5.7
+131,Metta World Peace,Sacramento Kings,31.7,13.2,4.5,2.7,1.7,0.5,1.8,0.414,0.339,0.715,3.5,7.9,1.2,3.4,2.6,3.6
+132,David Robinson,San Antonio Spurs,34.7,21.1,10.6,2.5,1.4,3,2.4,0.518,0.25,0.736,7.4,14.3,0,0.1,6.1,8.3
+133,Manu Ginobili,San Antonio Spurs,25.4,13.3,3.5,3.8,1.3,0.3,2,0.447,0.369,0.827,2.9,5.9,1.4,3.8,3.2,3.9
+134,Tim Duncan,San Antonio Spurs,34,19,10.8,3,0.7,2.2,2.4,0.506,0.179,0.696,7.4,14.5,0,0.1,4.2,6.1
+135,Lamarcus Aldridge,San Antonio Spurs,33.7,19.1,8.1,1.9,0.7,1.1,1.5,0.493,0.32,0.813,7.5,15,0.2,0.7,3.4,4.2
+136,Avery Johnson,San Antonio Spurs,25.3,8.4,1.7,5.5,1,0.1,1.7,0.479,0.145,0.706,3.4,7,0,0.2,1.5,2.1
+137,Morris Peterson,Toronto Raptors,27.2,10.7,3.5,1.5,0.9,0.2,1,0.418,0.373,0.773,2.4,5.4,1.4,3.8,1.6,2
+138,Vince Carter,Toronto Raptors,30.1,16.7,4.3,3.1,1,0.6,1.7,0.435,0.371,0.798,4.5,9.8,1.5,4,3.1,3.9
+139,Andrea Bargnani,Toronto Raptors,28.7,14.3,4.6,1.2,0.4,0.9,1.5,0.439,0.354,0.824,4.2,8.9,1.1,3.2,2.5,3
+140,Chris Bosh,Toronto Raptors,35.8,19.2,8.5,2,0.8,1,2,0.494,0.335,0.799,6.6,13.1,0.3,1,5,6.3
+141,Jose Calderon,Toronto Raptors,26.4,8.9,2.4,5.8,0.8,0.1,1.5,0.472,0.407,0.873,2.4,4.7,1,2.5,1,1.2
+142,Andrei Kirilenko,Utah Jazz,30,11.8,5.5,2.7,1.4,1.8,1.9,0.474,0.31,0.754,3.5,6.8,0.5,1.5,3.5,4.6
+143,Carlos Boozer,Utah Jazz,31.2,16.2,9.5,2.2,0.9,0.4,2.1,0.521,0.071,0.722,6.8,13,0,0,2.6,3.7
+144,Karl Malone,Utah Jazz,37.2,25,10.1,3.6,1.4,0.8,3.1,0.516,0.274,0.742,9.1,17.5,0.1,0.2,6.6,8.9
+145,Mark Eaton,Utah Jazz,28.8,6,7.9,1,0.4,3.5,1.5,0.458,0,0.649,2.4,5.2,0,0,1.2,1.9
+146,Gordon Hayward,Utah Jazz,30.7,15.2,4.4,3.5,1,0.4,1.9,0.455,0.37,0.822,4,8.1,1.3,3.6,3.3,4
+147,Marcin Gortat,Washington Wizards,25.7,9.9,7.9,1.1,0.5,1.1,1.2,0.551,0.15,0.68,4.2,7.6,0,0,1.4,2.1
+148,Gilbert Arenas,Washington Wizards,35.1,20.7,3.9,5.3,1.6,0.2,3.2,0.421,0.351,0.803,4.8,10.5,2,5.6,5.2,6.5
+149,John Wall,Washington Wizards,34.9,18.7,4.2,8.9,1.6,0.7,3.7,0.43,0.322,0.776,5.8,12.6,1,3.1,4.2,5.4
+150,Antawn Jamison,Washington Wizards,34.8,18.5,7.5,1.6,1,0.4,1.6,0.451,0.346,0.724,6,12.6,1.1,3.1,3.3,4.5
+151,Jeff Malone,Washington Wizards,32.8,19,2.6,2.4,0.6,0.1,1.7,0.484,0.268,0.871,7.7,15.9,0.1,0.4,3.3,3.7`;
+
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const headers = lines[0].split(',');
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const row = {};
+                headers.forEach((header, index) => {
+                    const value = values[index];
+                    if (!isNaN(value) && value !== '') {
+                        row[header] = parseFloat(value);
+                    } else {
+                        row[header] = value;
+                    }
+                });
+                data.push(row);
+            }
+            return data;
+        }
+
+        function calculatePer36Stats(player) {
+            const mpg = player.MPG;
+            const factor = 36 / mpg;
+            
+            return {
+                playerName: player['Player Name'],
+                teamName: player['Team Name'],
+                mpg: mpg,
+                pts36: (player.PPG * factor).toFixed(1),
+                fgm36: ((player['3PM'] + player['2PM']) * factor).toFixed(1),
+                threePM36: (player['3PM'] * factor).toFixed(1),
+                twoPM36: (player['2PM'] * factor).toFixed(1),
+                ftm36: (player.FTM * factor).toFixed(1),
+                reb36: (player.RPG * factor).toFixed(1),
+                ast36: (player.APG * factor).toFixed(1),
+                blk36: (player.BPG * factor).toFixed(1),
+                stl36: (player.SPG * factor).toFixed(1),
+                to36: (player['TO/G'] * factor).toFixed(1),
+                compositeScore: (
+                    (player['3PM'] * factor * 3) +
+                    (player['2PM'] * factor * 2) +
+                    (player.FTM * factor * 1) +
+                    (player.RPG * factor * 1.2) +
+                    (player.APG * factor * 1.5) +
+                    (player.BPG * factor * 2) +
+                    (player.SPG * factor * 2) +
+                    (player['TO/G'] * factor * -1)
+                ).toFixed(1),
+                customSum: 0 // Will be calculated dynamically
+            };
+        }
+
+        function updateCustomSum() {
+            const checkboxes = document.querySelectorAll('.checkbox-item input[type="checkbox"]:checked');
+            const selectedColumns = Array.from(checkboxes).map(cb => cb.value);
+
+            playersData.forEach(player => {
+                let sum = 0;
+                selectedColumns.forEach(column => {
+                    sum += parseFloat(player[column]) || 0;
+                });
+                player.customSum = sum.toFixed(1);
+            });
+
+            // Update the custom column header to show selected stats
+            const customHeader = document.querySelector('[data-column="customSum"]');
+            if (selectedColumns.length > 0) {
+                const labelMap = {
+                    'pts36': 'PTS',
+                    'fgm36': 'FGM',
+                    'threePM36': '3PM',
+                    'twoPM36': '2PM',
+                    'ftm36': 'FTM',
+                    'reb36': 'REB',
+                    'ast36': 'AST',
+                    'blk36': 'BLK',
+                    'stl36': 'STL',
+                    'to36': 'TO'
+                };
+                const shortLabels = selectedColumns.map(col => labelMap[col] || col);
+                customHeader.textContent = `${shortLabels.join('+')} ↕`;
+            } else {
+                customHeader.textContent = 'Custom Sum ↕';
+            }
+
+            // Re-render the visible table rows with updated customSum values
+            filterPlayers();
+        }
+
+                function setupEventListeners() {
+            document.getElementById('searchBox').addEventListener('input', filterPlayers);
+            document.getElementById('teamFilter').addEventListener('change', filterPlayers);
+            document.getElementById('rankFilter').addEventListener('change', filterPlayers);
+            
+            // Add sorting functionality
+            document.querySelectorAll('.sortable').forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.column;
+                    sortTable(column, header);
+                });
+            });
+            
+            // Add custom sum functionality
+            document.querySelectorAll('.checkbox-item input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', updateCustomSum);
+            });
+            
+            // Initialize custom sum
+            updateCustomSum();
+        }
+
+        function initializeApp() {
+            const rawData = parseCSV(csvData);
+            playersData = rawData.map(calculatePer36Stats);
+            
+            // Sort by composite score (highest first)
+            playersData.sort((a, b) => parseFloat(b.compositeScore) - parseFloat(a.compositeScore));
+            
+            populateFilters();
+            updateStatsSummary();
+            renderTable(playersData);
+            setupEventListeners();
+        }
+
+        function populateFilters() {
+            const teamFilter = document.getElementById('teamFilter');
+            const teams = [...new Set(playersData.map(p => p.teamName))].sort();
+            
+            teams.forEach(team => {
+                const option = document.createElement('option');
+                option.value = team;
+                option.textContent = team;
+                teamFilter.appendChild(option);
+            });
+        }
+
+        function updateStatsSummary() {
+            const scores = playersData.map(p => parseFloat(p.compositeScore));
+            const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+            const maxScore = Math.max(...scores).toFixed(1);
+            const minScore = Math.min(...scores).toFixed(1);
+            
+            const summaryHTML = `
+                <div class="stat-card">
+                    <span class="stat-value">${playersData.length}</span>
+                    <span class="stat-label">Total Players</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${maxScore}</span>
+                    <span class="stat-label">Highest Score</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${avgScore}</span>
+                    <span class="stat-label">Average Score</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">${minScore}</span>
+                    <span class="stat-label">Lowest Score</span>
+                </div>
+            `;
+            
+            document.getElementById('statsSummary').innerHTML = summaryHTML;
+        }
+
+        function getRankClass(rank) {
+            if (rank === 1) return 'rank-1';
+            if (rank === 2) return 'rank-2';
+            if (rank === 3) return 'rank-3';
+            if (rank <= 10) return 'rank-top10';
+            if (rank <= 25) return 'rank-top25';
+            return '';
+        }
+
+        function renderTable(data) {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            data.forEach((player, index) => {
+                const rank = index + 1;
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td class="rank-cell ${getRankClass(rank)}">#${rank}</td>
+                    <td class="player-name">${player.playerName}</td>
+                    <td class="team-name">${player.teamName}</td>
+                    <td class="score-cell">${player.compositeScore}</td>
+                    <td class="pts-cell">${player.pts36}</td>
+                    <td>${player.fgm36}</td>
+                    <td>${player.threePM36}</td>
+                    <td>${player.twoPM36}</td>
+                    <td>${player.ftm36}</td>
+                    <td>${player.reb36}</td>
+                    <td>${player.ast36}</td>
+                    <td>${player.blk36}</td>
+                    <td>${player.stl36}</td>
+                    <td>${player.to36}</td>
+                    <td>${player.mpg}</td>
+                    <td class="custom-sum-cell">${player.customSum}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        function filterPlayers() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const teamFilter = document.getElementById('teamFilter').value;
+            const rankFilter = document.getElementById('rankFilter').value;
+            
+            let filtered = playersData.filter(player => {
+                const matchesSearch = player.playerName.toLowerCase().includes(searchTerm) ||
+                                    player.teamName.toLowerCase().includes(searchTerm);
+                const matchesTeam = !teamFilter || player.teamName === teamFilter;
+                return matchesSearch && matchesTeam;
+            });
+            
+            if (rankFilter) {
+                const originalRanks = playersData.map((player, index) => ({ ...player, originalRank: index + 1 }));
+                filtered = filtered.map(player => {
+                    const original = originalRanks.find(p => p.playerName === player.playerName);
+                    return { ...player, originalRank: original.originalRank };
+                });
+                
+                if (rankFilter === 'top10') {
+                    filtered = filtered.filter(p => p.originalRank <= 10);
+                } else if (rankFilter === 'top25') {
+                    filtered = filtered.filter(p => p.originalRank <= 25);
+                } else if (rankFilter === 'top50') {
+                    filtered = filtered.filter(p => p.originalRank <= 50);
+                }
+            }
+            
+            renderTable(filtered);
+        }
+
+
+        // function updateCustomSum() {
+        //     const selectedStats = Array.from(document.querySelectorAll('.custom-stat-checkbox:checked'))
+        //     .map(cb => cb.value);
+
+        //     // Update header
+        //     const headerText = selectedStats.length > 0 ? selectedStats.join('+') + ' ↕' : 'Custom ↕';
+        //     document.getElementById('custom-column-header').innerText = headerText;
+
+        //     // Update custom sum column for each row
+        //     const rows = document.querySelectorAll('#playerTable tbody tr');
+        //     rows.forEach(row => {
+        //     let sum = 0;
+        //     selectedStats.forEach(stat => {
+        //         const cell = row.querySelector(`[data-stat="${stat}"]`);
+        //         if (cell) {
+        //         const value = parseFloat(cell.textContent);
+        //         if (!isNaN(value)) {
+        //             sum += value;
+        //         }
+        //         }
+        //     });
+        //     // Update or create custom cell
+        //     let customCell = row.querySelector('.custom-sum-cell');
+        //     if (!customCell) {
+        //         customCell = document.createElement('td');
+        //         customCell.classList.add('custom-sum-cell');
+        //         row.appendChild(customCell);
+        //     }
+        //     customCell.textContent = sum.toFixed(1);
+        //     });
+        // }
+
+        let currentSort = { column: 'compositeScore', direction: 'desc' };
+
+        function sortTable(column, headerElement) {
+            // Determine sort direction
+            let direction = 'desc';
+            if (currentSort.column === column && currentSort.direction === 'desc') {
+                direction = 'asc';
+            }
+
+            // Update current sort
+            currentSort = { column, direction };
+
+            // Remove existing sort indicators
+            document.querySelectorAll('.sortable').forEach(header => {
+                header.classList.remove('sorted-asc', 'sorted-desc');
+            });
+
+            // Add sort indicator to current column
+            headerElement.classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+
+            // Get current filtered data
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const teamFilter = document.getElementById('teamFilter').value;
+            const rankFilter = document.getElementById('rankFilter').value;
+
+            let dataToSort = playersData.filter(player => {
+                const matchesSearch = player.playerName.toLowerCase().includes(searchTerm) ||
+                                    player.teamName.toLowerCase().includes(searchTerm);
+                const matchesTeam = !teamFilter || player.teamName === teamFilter;
+                return matchesSearch && matchesTeam;
+            });
+
+            // Sort the data
+            dataToSort.sort((a, b) => {
+                let valueA = parseFloat(a[column]) || 0;
+                let valueB = parseFloat(b[column]) || 0;
+                
+                // For string columns, use string comparison
+                if (isNaN(valueA) || isNaN(valueB)) {
+                    valueA = a[column] || '';
+                    valueB = b[column] || '';
+                    return direction === 'asc' ? 
+                        valueA.localeCompare(valueB) : 
+                        valueB.localeCompare(valueA);
+                }
+                
+                return direction === 'asc' ? valueA - valueB : valueB - valueA;
+            });
+
+            // Apply rank filter if needed
+            if (rankFilter) {
+                const originalRanks = playersData.map((player, index) => ({ ...player, originalRank: index + 1 }));
+                dataToSort = dataToSort.map(player => {
+                    const original = originalRanks.find(p => p.playerName === player.playerName);
+                    return { ...player, originalRank: original.originalRank };
+                });
+                
+                if (rankFilter === 'top10') {
+                    dataToSort = dataToSort.filter(p => p.originalRank <= 10);
+                } else if (rankFilter === 'top25') {
+                    dataToSort = dataToSort.filter(p => p.originalRank <= 25);
+                } else if (rankFilter === 'top50') {
+                    dataToSort = dataToSort.filter(p => p.originalRank <= 50);
+                }
+            }
+
+            renderTable(dataToSort);
+        }
+
+        // Initialize the app
+        initializeApp();
+    </script>
+</body>
+</html>
