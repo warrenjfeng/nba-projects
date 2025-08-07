@@ -310,6 +310,10 @@
                     <label for="cb-fgm36">FGM/36</label>
                 </div>
                 <div class="checkbox-item">
+                    <input type="checkbox" id="cb-fga36" value="fga36">
+                    <label for="cb-fga36">FGA/36</label>
+                </div>
+                <div class="checkbox-item">
                     <input type="checkbox" id="cb-threePM36" value="threePM36">
                     <label for="cb-threePM36">3PM/36</label>
                 </div>
@@ -365,6 +369,7 @@
                         <th class="sortable" data-column="compositeScore">Composite Score ↕</th>
                         <th class="sortable" data-column="pts36">PTS/36 ↕</th>
                         <th class="sortable" data-column="fgm36">FGM/36 ↕</th>
+                        <th class="sortable" data-column="fga36">FGA/36 ↕</th>
                         <th class="sortable" data-column="threePM36">3PM/36 ↕</th>
                         <th class="sortable" data-column="twoPM36">2PM/36 ↕</th>
                         <th class="sortable" data-column="ftm36">FTM/36 ↕</th>
@@ -571,6 +576,7 @@
                 mpg: mpg,
                 pts36: (player.PPG * factor).toFixed(1),
                 fgm36: ((player['3PM'] + player['2PM']) * factor).toFixed(1),
+                fga36: ((player['3PA'] + player['2PA']) * factor).toFixed(1),
                 threePM36: (player['3PM'] * factor).toFixed(1),
                 twoPM36: (player['2PM'] * factor).toFixed(1),
                 ftm36: (player.FTM * factor).toFixed(1),
@@ -611,6 +617,7 @@
                 const labelMap = {
                     'pts36': 'PTS',
                     'fgm36': 'FGM',
+                    'fga36': 'FGA',
                     'threePM36': '3PM',
                     'twoPM36': '2PM',
                     'ftm36': 'FTM',
@@ -729,6 +736,7 @@
                     <td class="score-cell">${player.compositeScore}</td>
                     <td class="pts-cell">${player.pts36}</td>
                     <td>${player.fgm36}</td>
+                    <td>${player.fga36}</td>
                     <td>${player.threePM36}</td>
                     <td>${player.twoPM36}</td>
                     <td>${player.ftm36}</td>
